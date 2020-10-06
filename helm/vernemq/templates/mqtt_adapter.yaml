@@ -4,7 +4,7 @@ metadata:
   name: "mainflux-mqtt-adapter"
   namespace: {{ .Release.Namespace }}
   labels:
-    app.kubernetes.io/name: {{ include "vernemq.name" . }}
+    app.kubernetes.io/name: "mainflux-mqtt"
     helm.sh/chart: {{ include "vernemq.chart" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
@@ -19,7 +19,7 @@ metadata:
   name: {{ include "vernemq.serviceAccountName" . }}
   namespace: {{ .Release.Namespace }}
   labels:
-    app.kubernetes.io/name: {{ include "vernemq.name" . }}
+    app.kubernetes.io/name: "mainflux-mqtt"
     helm.sh/chart: {{ include "vernemq.chart" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
@@ -30,7 +30,7 @@ metadata:
   name: "mainflux-mqtt-adapter"
   namespace: {{ .Release.Namespace }}
   labels:
-    app.kubernetes.io/name: {{ include "vernemq.name" . }}
+    app.kubernetes.io/name: "mainflux-mqtt"
     helm.sh/chart: {{ include "vernemq.chart" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
@@ -48,7 +48,7 @@ kind: Service
 metadata:
   name: "mainflux-mqtt-adapter-headless"
   labels:
-    app.kubernetes.io/name: {{ include "vernemq.name" . }}
+    app.kubernetes.io/name: "mainflux-mqtt"
     helm.sh/chart: {{ include "vernemq.chart" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
@@ -61,7 +61,7 @@ spec:
     port: 8888
     targetPort: prometheus
   selector:
-    app.kubernetes.io/name: {{ include "vernemq.name" . }}
+    app.kubernetes.io/name: "mainflux-mqtt"
     app.kubernetes.io/instance: {{ .Release.Name }}
 ---
 apiVersion: v1
@@ -69,7 +69,7 @@ kind: Service
 metadata:
   name: "mainflux-mqtt-adapter"
   labels:
-    app.kubernetes.io/name: {{ include "vernemq.name" . }}
+    app.kubernetes.io/name: "mainflux-mqtt"
     helm.sh/chart: {{ include "vernemq.chart" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
@@ -143,7 +143,7 @@ spec:
       {{- end }}
     {{- end }}
   selector:
-    app.kubernetes.io/name: {{ include "vernemq.name" . }}
+    app.kubernetes.io/name: "mainflux-mqtt"
     app.kubernetes.io/instance: {{ .Release.Name }}
 ---
 apiVersion: apps/v1
@@ -151,17 +151,10 @@ kind: StatefulSet
 metadata:
   name: "mainflux-mqtt-adapter"
   labels:
-    app.kubernetes.io/name: {{ include "vernemq.name" . }}
+    app.kubernetes.io/name: "mainflux-mqtt"
     helm.sh/chart: {{ include "vernemq.chart" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
-  {{- if .Values.statefulset.labels }}
-    {{ toYaml .Values.statefulset.labels | nindent 4 }}
-  {{- end }}
-  {{- with .Values.statefulset.annotations }}
-  annotations:
-    {{ toYaml . | nindent 4 }}
-  {{- end }}
 spec:
   serviceName: "mainflux-mqtt-adapter-headless"
   replicas: {{ .Values.replicaCount }}
@@ -170,20 +163,16 @@ spec:
     type: {{ .Values.statefulset.updateStrategy }}
   selector:
     matchLabels:
-      app.kubernetes.io/name: {{ include "vernemq.name" . }}
+      app.kubernetes.io/name: "mainflux-mqtt"
       app.kubernetes.io/instance: {{ .Release.Name }}
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: {{ include "vernemq.name" . }}
+        app.kubernetes.io/name: "mainflux-mqtt"
         app.kubernetes.io/instance: {{ .Release.Name }}
-      {{- with .Values.statefulset.podAnnotations }}
-      annotations:
-        {{ toYaml . | nindent 8 }}
-      {{- end }}
     spec:
       serviceAccountName: {{ include "vernemq.serviceAccountName" . }}
-      terminationGracePeriodSeconds: {{ .Values.statefulset.terminationGracePeriodSeconds }}
+      terminationGracePeriodSeconds: 60
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
@@ -218,17 +207,34 @@ spec:
             - name: DOCKER_VERNEMQ_DISCOVERY_KUBERNETES
               value: "1"
             - name: DOCKER_VERNEMQ_KUBERNETES_LABEL_SELECTOR
-              value: "app.kubernetes.io/name={{ include "vernemq.name" . }},app.kubernetes.io/instance={{ .Release.Name }}"
+              value: "app.kubernetes.io/name=mainflux-mqtt,app.kubernetes.io/instance={{ .Release.Name }}"
             {{- /* Add this localhost listener in order to get the port forwarding working */}}
             - name: DOCKER_VERNEMQ_LISTENER__TCP__LOCALHOST
               value: "127.0.0.1:1883"
-            {{- if .Values.service.mqtts.enabled }}
-            - name: DOCKER_VERNEMQ_LISTENER__SSL__DEFAULT
-              value: "$(MY_POD_IP):{{ .Values.service.mqtts.port }}"
-            {{- end }}
-            {{- if .Values.additionalEnv }}
-            {{ toYaml .Values.additionalEnv | nindent 12 }}
-            {{- end }}
+            - name: DOCKER_VERNEMQ_LOG__CONSOLE__LEVEL
+              value: {{ default .Values.defaults.logLevel .Values.mqtt.broker.logLevel }}
+            - name: MF_MQTT_VERNEMQ_GRPC_POOL_SIZE
+              value: "1000"
+            - name: DOCKER_VERNEMQ_ALLOW_ANONYMOUS
+              value: "on"
+            - name: DOCKER_VERNEMQ_DISCOVERY_KUBERNETES
+              value: "1"
+            - name: DOCKER_VERNEMQ_ALLOW_REGISTER_DURING_NETSPLIT
+              value: "on"
+            - name: DOCKER_VERNEMQ_MAX_OFFLINE_MESSAGES
+              value: "-1"
+            - name: DOCKER_VERNEMQ_MAX_ONLINE_MESSAGES
+              value: "-1"
+            - name: DOCKER_VERNEMQ_MAX_INFLIGHT_MESSAGES
+              value: "0"
+            - name: DOCKER_VERNEMQ_PLUGINS__VMQ_PASSWD
+              value: "off"
+            - name: DOCKER_VERNEMQ_LISTENER__NR_OF_ACCEPTORS
+              value: "1000"
+            - name: DOCKER_VERNEMQ_LISTENER__TCP__LOCALHOST
+              value: "127.0.0.1:1883"
+            - name: DOCKER_VERNEMQ_LISTENER__WS__LOCALHOST
+              value: "127.0.0.1:8080"
           resources:
             {{ toYaml .Values.resources | nindent 12 }}
           livenessProbe:
@@ -256,22 +262,6 @@ spec:
               mountPath: /vernemq/log
             - name: data
               mountPath: /vernemq/data
-            {{- range .Values.secretMounts }}
-            - name: {{ .name }}
-              mountPath: {{ .path }}
-              readOnly: true
-            {{- end }}
-          {{- if .Values.extraVolumeMounts }}
-            {{- toYaml .Values.extraVolumeMounts | nindent 12 }}
-          {{- end }}
-          {{- with .Values.statefulset.lifecycle }}
-          lifecycle:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
-    {{- with .Values.nodeSelector }}
-      nodeSelector:
-        {{ toYaml . | nindent 8 }}
-    {{- end }}
     {{- if eq .Values.podAntiAffinity "hard" }}
       affinity:
         podAntiAffinity:
@@ -282,7 +272,7 @@ spec:
                   - key: "app.kubernetes.io/name"
                     operator: In
                     values:
-                      - {{ include "vernemq.name" . }}
+                      - "mainflux-mqtt"
     {{- else if eq .Values.podAntiAffinity "soft" }}
       affinity:
         podAntiAffinity:
@@ -295,7 +285,7 @@ spec:
                     - key: "app.kubernetes.io/name"
                       operator: In
                       values:
-                        - {{ include "vernemq.name" . }}
+                        - "mainflux-mqtt"
     {{- end }}
     {{- with .Values.tolerations }}
       tolerations:
