@@ -15,7 +15,7 @@ rules:
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: {{ include "vernemq.serviceAccountName" . }}
+  name: "mainflux"
   namespace: {{ .Release.Namespace }}
   labels:
     app.kubernetes.io/name: "mainflux-mqtt"
@@ -33,7 +33,7 @@ metadata:
     app.kubernetes.io/managed-by: {{ .Release.Service }}
 subjects:
   - kind: ServiceAccount
-    name: {{ include "vernemq.serviceAccountName" . }} {{/* Name is case sensitive */}}
+    name: "mainflux" {{/* Name is case sensitive */}}
     namespace: {{ .Release.Namespace }}
 roleRef:
   kind: Role {{/* this must be Role or ClusterRole */}}
@@ -68,13 +68,6 @@ metadata:
     app.kubernetes.io/name: "mainflux-mqtt"
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
-  {{- if .Values.service.labels }}
-    {{ toYaml .Values.service.labels | nindent 4 }}
-  {{- end }}
-  {{- with .Values.service.annotations }}
-  annotations:
-    {{ toYaml . | nindent 4 }}
-  {{- end }}
 spec:
 {{- if (or (eq .Values.service.type "ClusterIP") (empty .Values.service.type)) }}
   type: ClusterIP
@@ -126,9 +119,6 @@ metadata:
 spec:
   serviceName: "mainflux-mqtt-adapter-headless"
   replicas: {{ .Values.replicaCount }}
-  podManagementPolicy: {{ .Values.statefulset.podManagementPolicy }}
-  updateStrategy:
-    type: {{ .Values.statefulset.updateStrategy }}
   selector:
     matchLabels:
       app.kubernetes.io/name: "mainflux-mqtt"
@@ -139,12 +129,12 @@ spec:
         app.kubernetes.io/name: "mainflux-mqtt"
         app.kubernetes.io/instance: {{ .Release.Name }}
     spec:
-      serviceAccountName: {{ include "vernemq.serviceAccountName" . }}
+      serviceAccountName: "mainflux"
       terminationGracePeriodSeconds: 60
       containers:
         - name: {{ .Chart.Name }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          image: "{{ default .Values.defaults.image.repository .Values.mqtt.broker.image.repository }}:{{ default .Values.defaults.image.tag .Values.mqtt.broker.image.tag }}"
+          imagePullPolicy: {{ default .Values.defaults.image.pullPolicy .Values.mqtt.broker.image.pullPolicy }}
           ports:
             - containerPort: 1883
               name: mqtt
@@ -163,6 +153,8 @@ spec:
             {{- range tuple 9100 9101 9102 9103 9104 9105 9106 9107 9108 9109 }}
             - containerPort: {{ . }}
             {{- end }}
+          stdin: true
+          tty: true
           env:
             - name: MY_POD_NAME
               valueFrom:
@@ -210,21 +202,21 @@ spec:
               path: /health
               port: prometheus
               scheme: HTTP
-            initialDelaySeconds: {{ .Values.statefulset.livenessProbe.initialDelaySeconds }}
-            periodSeconds: {{ .Values.statefulset.livenessProbe.periodSeconds }}
-            timeoutSeconds: {{ .Values.statefulset.livenessProbe.timeoutSeconds }}
-            successThreshold: {{ .Values.statefulset.livenessProbe.successThreshold }}
-            failureThreshold: {{ .Values.statefulset.livenessProbe.failureThreshold }}
+            initialDelaySeconds: 90
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
           readinessProbe:
             httpGet:
               path: /health
               port: prometheus
               scheme: HTTP
-            initialDelaySeconds: {{ .Values.statefulset.readinessProbe.initialDelaySeconds }}
-            periodSeconds: {{ .Values.statefulset.readinessProbe.periodSeconds }}
-            timeoutSeconds: {{ .Values.statefulset.readinessProbe.timeoutSeconds }}
-            successThreshold: {{ .Values.statefulset.readinessProbe.successThreshold }}
-            failureThreshold: {{ .Values.statefulset.readinessProbe.failureThreshold }}
+            initialDelaySeconds: 90
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
           volumeMounts:
             - name: logs
               mountPath: /vernemq/log
