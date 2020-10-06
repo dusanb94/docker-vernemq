@@ -5,8 +5,8 @@
 replicaCount: 1
 
 image:
-  repository: vernemq/vernemq
-  tag: 1.10.4.1-alpine
+  repository: mainflux/mqtt-verne
+  tag: test
   pullPolicy: IfNotPresent
 
 nameOverride: ""
@@ -19,7 +19,7 @@ service:
   # NodePort - Listen to a port on nodes and forward to the service.
   # ClusterIP - Listen on the service internal to the cluster only.
   # LoadBalancer - Create a LoadBalancer in the cloud provider and forward to the service.
-  type: ClusterIP
+  type: LoadBalancer
 #  clusterIP: 10.1.2.4
 #  externalIPs: []
 #  loadBalancerIP: 10.1.2.4
@@ -223,3 +223,42 @@ additionalEnv:
 #    value: "/etc/ssl/vernemq/tls.crt"
 #  - name: DOCKER_VERNEMQ_LISTENER__SSL__KEYFILE
 #    value: "/etc/ssl/vernemq/tls.key"
+
+
+defaults:
+  logLevel: "info"
+  image:
+    pullPolicy: "IfNotPresent"
+    repository: "mainflux"
+    tag: "0.11.0"
+  # Replicas of MQTT adapter, NATS, Things, Envoy and Authn
+  replicaCount: 3
+  natsPort: 4222
+  jaegerPort: 6831
+
+  
+mqtt:
+  enabled: true
+  securityContext:
+    runAsUser: 10000
+    runAsGroup: 10000
+    fsGroup: 10000
+  proxy:
+    image:
+      repository: "mainflux/mqtt"
+      tag: "0.11.0"
+      pullPolicy: "Always"
+    mqttPort: 1884
+    wsPort: 8081
+    logLevel: "debug"
+  broker:
+    image:
+      repository: "mainflux/vernemq"
+      tag: "0.11.0"
+    mqttPort: 1883
+    wsPort: 8080
+    logLevel: "info"
+    persistentVolume:
+      size: 5Gi
+  redisESPort: 6379
+  redisCachePort: 6379
