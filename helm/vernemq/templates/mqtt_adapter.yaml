@@ -27,7 +27,7 @@ metadata:
 kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: {{ include "vernemq.fullname" . }}
+  name: "mainflux-mqtt-adapter"
   namespace: {{ .Release.Namespace }}
   labels:
     app.kubernetes.io/name: {{ include "vernemq.name" . }}
@@ -40,13 +40,13 @@ subjects:
     namespace: {{ .Release.Namespace }}
 roleRef:
   kind: Role {{/* this must be Role or ClusterRole */}}
-  name: {{ include "vernemq.fullname" . }} {{/* this must match the name of the Role or ClusterRole you wish to bind to */}}
+  name: "mainflux-mqtt-adapter" {{/* this must match the name of the Role or ClusterRole you wish to bind to */}}
   apiGroup: rbac.authorization.k8s.io
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "vernemq.fullname" . }}-headless
+  name: "mainflux-mqtt-adapter-headless"
   labels:
     app.kubernetes.io/name: {{ include "vernemq.name" . }}
     helm.sh/chart: {{ include "vernemq.chart" . }}
@@ -67,7 +67,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "vernemq.fullname" . }}
+  name: "mainflux-mqtt-adapter"
   labels:
     app.kubernetes.io/name: {{ include "vernemq.name" . }}
     helm.sh/chart: {{ include "vernemq.chart" . }}
@@ -149,7 +149,7 @@ spec:
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: {{ include "vernemq.fullname" . }}
+  name: "mainflux-mqtt-adapter"
   labels:
     app.kubernetes.io/name: {{ include "vernemq.name" . }}
     helm.sh/chart: {{ include "vernemq.chart" . }}
@@ -163,7 +163,7 @@ metadata:
     {{ toYaml . | nindent 4 }}
   {{- end }}
 spec:
-  serviceName: {{ include "vernemq.fullname" . }}-headless
+  serviceName: "mainflux-mqtt-adapter-headless"
   replicas: {{ .Values.replicaCount }}
   podManagementPolicy: {{ .Values.statefulset.podManagementPolicy }}
   updateStrategy:
