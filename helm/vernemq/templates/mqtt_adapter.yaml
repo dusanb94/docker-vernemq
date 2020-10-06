@@ -105,38 +105,12 @@ spec:
     {{ toYaml . | nindent 4 }}
 {{- end }}
   ports:
-    {{- if .Values.service.mqtt.enabled }}
     - port: {{ .Values.service.mqtt.port }}
       targetPort: mqtt
       name: mqtt
-      {{- if eq .Values.service.type "NodePort" }}
-      nodePort: {{ .Values.service.mqtt.nodePort }}
-      {{- end }}
-    {{- end }}
-    {{- if .Values.service.mqtts.enabled }}
-    - port: {{ .Values.service.mqtts.port }}
-      targetPort: mqtts
-      name: mqtts
-      {{- if eq .Values.service.type "NodePort" }}
-      nodePort: {{ .Values.service.mqtts.nodePort }}
-      {{- end }}
-    {{- end }}
-    {{- if .Values.service.ws.enabled }}
     - port: {{ .Values.service.ws.port }}
       targetPort: ws
       name: ws
-      {{- if eq .Values.service.type "NodePort" }}
-      nodePort: {{ .Values.service.ws.nodePort }}
-      {{- end }}
-    {{- end }}
-    {{- if .Values.service.wss.enabled }}
-    - port: {{ .Values.service.wss.port }}
-      targetPort: wss
-      name: wss
-      {{- if eq .Values.service.type "NodePort" }}
-      nodePort: {{ .Values.service.wss.nodePort }}
-      {{- end }}
-    {{- end }}
   selector:
     app.kubernetes.io/name: "mainflux-mqtt"
     app.kubernetes.io/instance: {{ .Release.Name }}
