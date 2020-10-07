@@ -1,7 +1,7 @@
 kind: Role
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: "mainflux-mqtt-adapter"
+  name: "mainflux-adapter-mqtt"
   namespace: {{ .Release.Namespace }}
   labels:
     app.kubernetes.io/name: "mainflux-mqtt"
@@ -25,7 +25,7 @@ metadata:
 kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: "mainflux-mqtt-adapter"
+  name: "mainflux-adapter-mqtt"
   namespace: {{ .Release.Namespace }}
   labels:
     app.kubernetes.io/name: "mainflux-mqtt"
@@ -37,13 +37,13 @@ subjects:
     namespace: {{ .Release.Namespace }}
 roleRef:
   kind: Role {{/* this must be Role or ClusterRole */}}
-  name: "mainflux-mqtt-adapter" {{/* this must match the name of the Role or ClusterRole you wish to bind to */}}
+  name: "mainflux-adapter-mqtt" {{/* this must match the name of the Role or ClusterRole you wish to bind to */}}
   apiGroup: rbac.authorization.k8s.io
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: "mainflux-mqtt-adapter-headless"
+  name: "mainflux-adapter-mqtt-headless"
   labels:
     app.kubernetes.io/name: "mainflux-mqtt"
     app.kubernetes.io/instance: {{ .Release.Name }}
@@ -63,7 +63,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: "mainflux-mqtt-adapter"
+  name: "mainflux-adapter-mqtt"
   labels:
     app.kubernetes.io/name: "mainflux-mqtt"
     app.kubernetes.io/instance: {{ .Release.Name }}
@@ -98,10 +98,10 @@ spec:
     {{ toYaml . | nindent 4 }}
 {{- end }}
   ports:
-    - port: {{ .Values.service.mqtt.port }}
+    - port:  {{ .Values.mqtt.proxy.mqttPort }}
       targetPort: mqtt
       name: mqtt
-    - port: {{ .Values.service.ws.port }}
+    - port: {{ .Values.mqtt.proxy.wsPort }}
       targetPort: ws
       name: ws
   selector:
@@ -111,14 +111,14 @@ spec:
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: "mainflux-mqtt-adapter"
+  name: "mainflux-adapter-mqtt"
   labels:
     app.kubernetes.io/name: "mainflux-mqtt"
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
 spec:
-  serviceName: "mainflux-mqtt-adapter-headless"
-  replicas: {{ .Values.replicaCount }}
+  serviceName: "mainflux-adapter-mqtt-headless"
+  replicas: {{ .Values.defaults.replicaCount }}
   selector:
     matchLabels:
       app.kubernetes.io/name: "mainflux-mqtt"
@@ -235,7 +235,7 @@ spec:
                       values:
                         - "mainflux-mqtt"
       securityContext:
-        {{ toYaml .Values.securityContext | nindent 8 }}
+        {{ toYaml .Values.mqtt.securityContext | nindent 8 }}
       volumes:
         - name: logs
           emptyDir: {}
